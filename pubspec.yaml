@@ -1,0 +1,54 @@
+name: intemssh2
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  # Using a standard SDK constraint for modern Flutter versions
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- Firebase Services (Updated to recent, compatible versions) ---
+  firebase_core: ^2.31.0
+  firebase_auth: ^4.19.4
+  cloud_firestore: ^4.17.3
+  firebase_storage: ^11.7.5
+
+  # --- State Management & Navigation ---
+  get: ^4.6.6
+
+  # --- UI & Utility Packages ---
+  intl: ^0.19.0
+  image_picker: ^1.1.1
+  fluttertoast: ^8.2.5
+  google_sign_in: ^6.2.1
+  http: ^1.2.1
+
+  # Note: community_charts_flutter is less common.
+  # Consider 'charts_flutter' if you run into issues.
+  community_charts_flutter: ^1.0.2
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Updated lints to a recent stable version
+  flutter_lints: ^3.0.0
+
+# The new section to fix the missing icons.
+# Make sure this is correctly indented.
+flutter:
+  uses-material-design: true
+  assets:
+     - assets/images/
+  # This section tells Flutter where to find the icon font file.
+  fonts:
+    - family: MaterialIcons
+      fonts:
+        - asset: assets/fonts/MaterialIcons-Regular.otf
+
