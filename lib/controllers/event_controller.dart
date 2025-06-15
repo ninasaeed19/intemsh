@@ -8,6 +8,9 @@ class EventController extends GetxController {
   final RxList<Event> allEvents = <Event>[].obs;
   final RxBool isLoading = true.obs;
 
+  final RxString searchQuery = ''.obs;
+  final RxString selectedCategory = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -27,6 +30,24 @@ class EventController extends GetxController {
   List<Event> get upcomingEvents => allEvents.where((e) => e.isApproved && !e.isPastEvent).toList();
   List<Event> get pendingEvents => allEvents.where((e) => !e.isApproved && !e.isPastEvent).toList();
   List<Event> get pastEvents => allEvents.where((e) => e.isPastEvent).toList();
+
+  List<Event> get filteredUpcomingEvents {
+    List<Event> filteredList = upcomingEvents;
+
+    if (searchQuery.value.isNotEmpty) {
+      filteredList = filteredList
+          .where((event) => event.title.toLowerCase().contains(searchQuery.value.toLowerCase()))
+          .toList();
+    }
+
+    if (selectedCategory.value.isNotEmpty) {
+      filteredList = filteredList
+          .where((event) => event.category == selectedCategory.value)
+          .toList();
+    }
+
+    return filteredList;
+  }
 
   Future<bool> saveEvent(Event eventFromForm, bool isEditing) async {
     if (isEditing) {
@@ -69,13 +90,10 @@ class EventController extends GetxController {
     }
   }
 
-  /// **NEW METHOD**: Un-approves an event and moves it back to pending.
   Future<void> unapproveEvent(Event event) async {
     final index = allEvents.indexWhere((e) => e.id == event.id);
     if (index != -1) {
-      // Create a copy of the event with 'isApproved' set to false.
       final unapprovedEvent = event.copyWith(isApproved: false);
-      // Replace the old event in the list with the updated one.
       allEvents[index] = unapprovedEvent;
       Get.snackbar('Success', '"${event.title}" has been moved to pending.', backgroundColor: Colors.blue, colorText: Colors.white);
     }

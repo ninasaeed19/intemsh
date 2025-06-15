@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../models/event.dart';
-import '../../controllers/event_controller.dart'; // Import the controller
+import '../../controllers/event_controller.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Get the instance of the EventController.
     final EventController controller = Get.find<EventController>();
+    final List<String> categories = ['Technology', 'Arts & Culture', 'Sports', 'Networking', 'Music'];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Upcoming Events'),
+        title: const Text('Find Events'),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
@@ -22,40 +22,93 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      // Use Obx to make the UI reactive.
-      body: Obx(() {
-        // Show a loading spinner while data is being fetched.
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        // Use the live data from the controller.
-        final events = controller.upcomingEvents;
-
-        if (events.isEmpty) {
-          return const Center(
-            child: Text(
-              'No upcoming events found.\nCheck back later!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                TextField(
+                  onChanged: (value) {
+                    controller.searchQuery.value = value;
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search by event name...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: categories.length + 1,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return Obx(() => ChoiceChip(
+                          label: const Text('All'),
+                          selected: controller.selectedCategory.value == '',
+                          onSelected: (selected) {
+                            controller.selectedCategory.value = '';
+                          },
+                        ));
+                      }
+                      final category = categories[index - 1];
+                      return Obx(() => ChoiceChip(
+                        label: Text(category),
+                        selected: controller.selectedCategory.value == category,
+                        onSelected: (selected) {
+                          controller.selectedCategory.value = category;
+                        },
+                      ));
+                    },
+                  ),
+                ),
+              ],
             ),
-          );
-        }
+          ),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16.0),
-          itemCount: events.length,
-          itemBuilder: (context, index) {
-            final event = events[index];
-            return EventCard(event: event);
-          },
-        );
-      }),
+              final events = controller.filteredUpcomingEvents;
+
+              if (events.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No events found.\nTry adjusting your search or filters.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                itemCount: events.length,
+                itemBuilder: (context, index) {
+                  final event = events[index];
+                  return EventCard(event: event);
+                },
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// The EventCard widget remains the same as it just displays the data passed to it.
 class EventCard extends StatelessWidget {
   final Event event;
   const EventCard({super.key, required this.event});
@@ -75,7 +128,7 @@ class EventCard extends StatelessWidget {
           children: [
             Hero(
               tag: 'event_image_${event.id}',
-              child: Image.network( // Use Image.asset if using local assets
+              child: Image.asset(
                 event.imageUrl,
                 height: 180,
                 width: double.infinity,
@@ -138,7 +191,7 @@ class InfoRow extends StatelessWidget {
     return Row(
       children: [
         Icon(icon, size: 16, color: Colors.grey.shade700),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Expanded(
           child: Text(text, style: TextStyle(fontSize: 14, color: Colors.grey.shade800), overflow: TextOverflow.ellipsis),
         ),

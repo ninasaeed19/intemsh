@@ -1,44 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../../models/event.dart'; // Your event model
+import '../../models/event.dart';
 
-class MyBookingsScreen extends StatefulWidget {
-  const MyBookingsScreen({super.key});
+class MyBookingsScreen extends StatelessWidget {
+  MyBookingsScreen({super.key});
 
-  @override
-  State<MyBookingsScreen> createState() => _MyBookingsScreenState();
-}
-
-class _MyBookingsScreenState extends State<MyBookingsScreen> {
-  // MOCK DATA: In a real app, this would come from a 'BookingsService'
-  // that fetches the user's bookings from Firestore.
   final List<Event> _bookedEvents = [
-    // Let's assume the user booked these two events.
     Event(
       id: '1',
       title: 'Tech Conference 2025',
-      description: 'Join us for the biggest tech conference of the year...',
+      description: 'The biggest tech conference of the year.',
       location: 'Main Auditorium',
       category: 'Technology',
-      imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=300&fit=crop',
+      imageUrl: 'assets/images/tech.png',
       dateTime: DateTime.now().add(const Duration(days: 10)),
       organizerId: 'admin1',
       maxAttendees: 200,
-      attendees: List.generate(180, (index) => 'user$index'),
-      isApproved: true,
-    ),
-    Event(
-      id: '3',
-      title: 'Annual Sports Gala',
-      description: 'Cheer for your favorite teams!',
-      location: 'University Stadium',
-      category: 'Sports',
-      imageUrl: 'https://images.unsplash.com/photo-1579952516518-6c2eac8c13f9?w=500&h=300&fit=crop',
-      dateTime: DateTime.now().add(const Duration(days: 30)),
-      organizerId: 'admin1',
-      maxAttendees: 500,
-      attendees: [],
+      attendees: List.generate(180, (i) => 'u$i'),
       isApproved: true,
     ),
   ];
@@ -48,8 +27,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Bookings'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
       ),
       body: _bookedEvents.isEmpty
           ? _buildEmptyState()
@@ -69,16 +46,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.event_busy_outlined,
-            size: 80,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.event_busy_outlined, size: 80, color: Colors.grey.shade400),
           const SizedBox(height: 20),
-          const Text(
-            'No Bookings Yet',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
+          const Text('No Bookings Yet', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
             'You haven\'t booked any events.\nExplore events and book one!',
@@ -97,7 +67,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   }
 }
 
-// A dedicated widget for a card in the bookings list
 class _BookingCard extends StatelessWidget {
   const _BookingCard({required this.event});
 
@@ -109,64 +78,81 @@ class _BookingCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 3,
-      child: InkWell(
-        onTap: () {
-          // Navigate to the detail screen for this booked event
-          Get.toNamed('/event_detail', arguments: event);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            children: [
-              // Event Image Thumbnail
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.network(
-                  event.imageUrl,
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            InkWell(
+              onTap: () => Get.toNamed('/event_detail', arguments: event),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Image.asset(
+                      event.imageUrl,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey.shade200,
+                          child: Icon(Icons.broken_image,
+                              color: Colors.grey.shade400)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.title,
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.bold),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        InfoRow(
+                            icon: Icons.calendar_today_outlined,
+                            text: DateFormat('MMM d, y').format(event.dateTime)),
+                        const SizedBox(height: 4),
+                        InfoRow(
+                            icon: Icons.location_on_outlined,
+                            text: event.location),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios,
+                      size: 16, color: Colors.grey),
+                ],
               ),
-              const SizedBox(width: 16),
-              // Event Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event.title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    InfoRow(
-                      icon: Icons.calendar_today_outlined,
-                      text: DateFormat('MMM d, yyyy').format(event.dateTime),
-                    ),
-                    const SizedBox(height: 4),
-                    InfoRow(
-                      icon: Icons.location_on_outlined,
-                      text: event.location,
-                    ),
-                  ],
-                ),
+            ),
+            const Divider(height: 20, thickness: 1),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.qr_code_2),
+                label: const Text('View Ticket'),
+                onPressed: () {
+                  Get.toNamed('/ticket', arguments: event);
+                },
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).primaryColor,
+                    side: BorderSide(color: Theme.of(context).primaryColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    )),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-            ],
-          ),
+            )
+          ],
         ),
       ),
     );
   }
 }
 
-// A small helper widget for icon-text rows to avoid code repetition
 class InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
@@ -179,11 +165,9 @@ class InfoRow extends StatelessWidget {
         Icon(icon, size: 14, color: Colors.grey.shade600),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(
-            text,
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text(text,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+              overflow: TextOverflow.ellipsis),
         ),
       ],
     );

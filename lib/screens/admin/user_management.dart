@@ -1,61 +1,120 @@
-import 'package:flutter/material.dart'; // **THE FIX**: Added this import for 'Colors'
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '/models/appuser.dart';
-import '/services/auth_service.dart';
+import '../../models/appuser.dart';
 
-enum UserStatus { loading, loaded, error, unauthenticated }
-
-class UserController extends GetxController {
-  static UserController get to => Get.find();
-
-  final Rx<UserStatus> status = UserStatus.loading.obs;
-  final Rxn<AppUser> user = Rxn<AppUser>(); // This is the reactive variable
-
-  final AuthService _authService = Get.find<AuthService>();
+class UserManagementScreen extends StatefulWidget {
+  const UserManagementScreen({super.key});
 
   @override
-  void onInit() {
-    super.onInit();
-    FirebaseAuth.instance.authStateChanges().listen((firebaseUser) {
-      if (firebaseUser != null) {
-        fetchUser(firebaseUser.uid);
-      } else {
-        user.value = null;
-        status.value = UserStatus.unauthenticated;
-      }
-    });
+  State<UserManagementScreen> createState() => _UserManagementScreenState();
+}
+
+class _UserManagementScreenState extends State<UserManagementScreen> {
+  // --- MOCK DATA: A local list to represent the users in the database ---
+  final List<AppUser> _mockUsers = [
+    AppUser(
+      id: 'admin123',
+      name: 'Hana Admin',
+      email: 'hana.admin@university.edu.eg',
+      role: 'admin',
+      profileImageUrl: 'https://i.pravatar.cc/150?u=hana',
+    ),
+    AppUser(
+      id: 'user456',
+      name: 'Shaza User',
+      email: 'shaza.user@university.edu.eg',
+      role: 'user',
+      profileImageUrl: 'https://i.pravatar.cc/150?u=shaza',
+    ),
+    AppUser(
+      id: 'user789',
+      name: 'Ali Student',
+      email: 'ali.student@university.edu.eg',
+      role: 'user',
+      profileImageUrl: 'https://i.pravatar.cc/150?u=ali',
+    ),
+    AppUser(
+      id: 'user101',
+      name: 'Fatima Graduate',
+      email: 'fatima.grad@university.edu.eg',
+      role: 'user',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Manage Users'),
+      ),
+      // We use a simple ListView.builder to display our mock list
+      body: ListView.builder(
+        itemCount: _mockUsers.length,
+        itemBuilder: (context, index) {
+          final user = _mockUsers[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.pink.shade100,
+                backgroundImage: user.profileImageUrl != null
+                    ? NetworkImage(user.profileImageUrl!)
+                    : null,
+                child: user.profileImageUrl == null
+                    ? Text(user.name.isNotEmpty ? user.name.substring(0, 1) : '?')
+                    : null,
+              ),
+              title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(user.email),
+              // The trailing widget shows the role and the menu
+              trailing: _buildRoleChipAndMenu(context, user),
+            ),
+          );
+        },
+      ),
+    );
   }
 
-  Future<void> fetchUser(String uid) async {
-    status.value = UserStatus.loading;
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists) {
-        user.value = AppUser.fromMap(doc.data()!, doc.id);
-        status.value = UserStatus.loaded;
-      } else {
-        status.value = UserStatus.error;
-      }
-    } catch (e) {
-      status.value = UserStatus.error;
-    }
-  }
-
-  Future<bool> updateUserProfile({
-    required String name,
-    required String imageUrl,
-  }) async {
-    if (user.value == null) return false;
-    try {
-      await _authService.updateUserProfile(uid: user.value!.id, name: name, imageUrl: imageUrl);
-      user.value = user.value!.copyWith(name: name, profileImageUrl: imageUrl);
-      Get.snackbar('Success', 'Profile updated successfully!', backgroundColor: Colors.green, colorText: Colors.white);
-      return true;
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to update profile. Please try again.', backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
+  // A helper widget to display the role chip and the popup menu
+  Widget _buildRoleChipAndMenu(BuildContext context, AppUser user) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Chip(
+          label: Text(
+            user.role.capitalizeFirst ?? user.role,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+          backgroundColor: user.isAdmin ? Theme.of(context).primaryColor : Colors.grey.shade600,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        PopupMenuButton<String>(
+          onSelected: (value) {
+            // The action here is just a snackbar for demonstration
+            String newRole = value;
+            Get.snackbar(
+                'Role Change (UI Demo)',
+                'Changing ${user.name}\'s role to ${newRole.capitalizeFirst}.',
+                snackPosition: SnackPosition.BOTTOM
+            );
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            // Only show "Make User" if they are currently an admin
+            if (user.isAdmin)
+              const PopupMenuItem<String>(
+                value: 'user',
+                child: Text('Make User'),
+              ),
+            // Only show "Make Admin" if they are not currently an admin
+            if (!user.isAdmin)
+              const PopupMenuItem<String>(
+                value: 'admin',
+                child: Text('Make Admin'),
+              ),
+          ],
+        ),
+      ],
+    );
   }
 }

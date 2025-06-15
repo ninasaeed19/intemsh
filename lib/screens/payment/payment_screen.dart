@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../models/event.dart';
+import '/models/event.dart';
+import '/services/paymentservice.dart'; // Import the new service
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -14,30 +15,31 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final Event event = Get.arguments as Event;
   bool _isLoading = false;
 
-  // MOCK PRICE for demonstration
-  final double mockPrice = 150.75;
+  final PaymentService _paymentService = Get.find<PaymentService>();
 
   void _processPayment() async {
     if (_formKey.currentState!.validate()) {
       setState(() { _isLoading = true; });
 
-      // In a real app, this is where you would call your PaymentService
-      // which interacts with the payment gateway SDK.
-      // e.g., final result = await PaymentService.process(cardNumber, expiry, cvv);
+      // Call the new PaymentService to handle the logic.
+      final bool success = await _paymentService.processPaymentAndBookEvent(event);
 
-      // We'll simulate a 3-second processing delay.
-      await Future.delayed(const Duration(seconds: 3));
-
-      setState(() { _isLoading = false; });
-
-      // On success, navigate to the confirmation screen, replacing the current screen.
-      Get.offNamed('/payment_success', arguments: event);
+      if (mounted) {
+        if (success) {
+          // On success, navigate to the confirmation screen.
+          Get.offNamed('/payment_success', arguments: event);
+        } else {
+          // On failure, the service already shows a snackbar, so we just stop loading.
+          setState(() { _isLoading = false; });
+        }
+      }
     }
   }
 
 
   @override
   Widget build(BuildContext context) {
+    // The rest of your build method remains the same...
     return Scaffold(
       appBar: AppBar(
         title: const Text('Complete Booking'),
@@ -70,9 +72,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: ListTile(
                   title: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: const Text('1 Ticket'),
-                  trailing: Text(
-                    'EGP ${mockPrice.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  trailing: const Text(
+                    'EGP 150.75', // Mock price
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
               ),
@@ -133,7 +135,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: Colors.green.shade600
                   ),
-                  child: Text('Pay EGP ${mockPrice.toStringAsFixed(2)} Now', style: const TextStyle(fontSize: 18)),
+                  child: const Text('Pay EGP 150.75 Now', style: TextStyle(fontSize: 18)),
                 ),
               )
             ],

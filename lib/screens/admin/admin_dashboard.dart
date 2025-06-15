@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../../controllers/user_controller.dart'; // Import UserController to get admin's name
-import '../../services/auth_service.dart'; // Import AuthService for logout
+import '../../controllers/user_controller.dart';
+import '../../controllers/event_controller.dart';
+import '../../services/auth_service.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
 
-  // MOCK DATA - In a real app, this would be fetched from services.
-  final int totalUpcomingEvents = 3;
-  final int pendingApprovalEvents = 1;
-  final int totalUsers = 256;
-  final double totalRevenue = 12500.50;
-
   @override
   Widget build(BuildContext context) {
-    // Get the UserController to display the admin's name
     final UserController userController = Get.find<UserController>();
-    // Use Obx to make the welcome message reactive
-    final adminName = userController.user.value?.name ?? 'Admin';
+    final EventController eventController = Get.find<EventController>();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.account_circle),
+            tooltip: 'Admin Profile',
             onPressed: () {
-              // Use the AuthService for a clean logout
+              Get.toNamed('/admin/profile');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () {
               Get.dialog(
                 AlertDialog(
                   title: const Text('Logout'),
@@ -48,42 +48,54 @@ class AdminDashboardScreen extends StatelessWidget {
           )
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- WELCOME MESSAGE ---
-            Text(
-              'Welcome back, $adminName!',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColorDark,
+      // THE FIX: We now use Obx to reactively check the loading status.
+      body: Obx(() {
+        // If either the user data or the event data is still loading, show a spinner.
+        if (userController.status.value == UserStatus.loading || eventController.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // If there was an error loading the user, show an error message.
+        if (userController.status.value == UserStatus.error) {
+          return const Center(child: Text('Could not load admin data.', style: TextStyle(color: Colors.red)));
+        }
+
+        // Once everything is loaded, build the main dashboard UI.
+        final adminName = userController.user.value?.name ?? 'Admin';
+        final upcomingCount = eventController.upcomingEvents.length;
+        final pendingCount = eventController.pendingEvents.length;
+        const totalUsers = 256;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome back, $adminName!',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColorDark,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Here is a summary of your app\'s activity.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-
-            // --- REDESIGNED STATISTICS SECTION ---
-            _buildStatsRow(),
-            const SizedBox(height: 24),
-
-            // --- REDESIGNED QUICK ACTIONS SECTION ---
-            _buildQuickActions(context),
-          ],
-        ),
-      ),
+              const SizedBox(height: 8),
+              const Text(
+                'Here is a summary of your app\'s activity.',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              _buildStatsRow(upcomingCount, totalUsers, pendingCount),
+              const SizedBox(height: 24),
+              _buildQuickActions(context, pendingCount),
+            ],
+          ),
+        );
+      }),
     );
   }
 
-  // A horizontal row of stats instead of a grid
-  Widget _buildStatsRow() {
-    final currencyFormat = NumberFormat.currency(locale: 'en_EG', symbol: 'EGP ');
+  Widget _buildStatsRow(int upcomingCount, int totalUsers, int pendingCount) {
     return Column(
       children: [
         Row(
@@ -92,7 +104,7 @@ class AdminDashboardScreen extends StatelessWidget {
               child: _StatCard(
                 icon: Icons.event_available,
                 label: 'Upcoming',
-                value: totalUpcomingEvents.toString(),
+                value: upcomingCount.toString(),
                 color: Colors.blue.shade700,
               ),
             ),
@@ -114,27 +126,19 @@ class AdminDashboardScreen extends StatelessWidget {
               child: _StatCard(
                 icon: Icons.pending_actions,
                 label: 'Pending',
-                value: pendingApprovalEvents.toString(),
+                value: pendingCount.toString(),
                 color: Colors.orange.shade800,
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.monetization_on,
-                label: 'Revenue',
-                value: currencyFormat.format(totalRevenue),
-                color: Colors.pink.shade700,
-              ),
-            ),
+            Expanded(child: Container()),
           ],
         ),
       ],
     );
   }
 
-  // A cleaner menu using a Card and ListTiles
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context, int pendingCount) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -160,20 +164,20 @@ class AdminDashboardScreen extends StatelessWidget {
                 icon: Icons.group,
                 title: 'Manage Users',
                 subtitle: 'View and manage user roles',
-                onTap: () => Get.snackbar('Coming Soon', 'User management will be available soon.'),
+                onTap: () => Get.toNamed('/admin/manage_users'),
               ),
-              // Conditional "Pending Item" tile for a cleaner look
-              if (pendingApprovalEvents > 0) ...[
+              if (pendingCount > 0) ...[
                 const Divider(height: 1),
                 _ActionTile(
                   icon: Icons.notification_important_rounded,
                   title: 'Pending Approvals',
-                  subtitle: '$pendingApprovalEvents event(s) awaiting review',
-                  onTap: () => Get.toNamed('/admin/manage_events'),
-                  // Add a visual indicator for pending items
+                  subtitle: '$pendingCount event(s) awaiting review',
+                  onTap: () {
+                    Get.toNamed('/admin/manage_events');
+                  },
                   trailing: const Icon(Icons.circle, color: Colors.orange, size: 12),
                 ),
-              ]
+              ],
             ],
           ),
         )
@@ -182,9 +186,6 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 }
 
-// --- REDESIGNED WIDGETS FOR THE DASHBOARD ---
-
-// A more compact, horizontal stat card with a gradient
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -222,11 +223,7 @@ class _StatCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
@@ -243,7 +240,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// A reusable ListTile for the action menu
 class _ActionTile extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -275,4 +271,3 @@ class _ActionTile extends StatelessWidget {
     );
   }
 }
-
